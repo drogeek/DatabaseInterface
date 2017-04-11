@@ -1,0 +1,23 @@
+#ifndef QUERY2JSON_H
+#define QUERY2JSON_H
+
+#include <QObject>
+#include <QSqlQuery>
+#include <QJsonDocument>
+#include <QJsonObject>
+#include <QJsonArray>
+#include <QSqlRecord>
+#include <QVariant>
+
+class Query2Json : public QObject
+{
+    Q_OBJECT
+public:
+    static const QString exec(const QByteArray sqlquery);
+
+signals:
+
+public slots:
+};
+
+#endif // QUERY2JSON_H
