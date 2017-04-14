@@ -1,13 +1,13 @@
 #include "query2json.h"
 
-const QString Query2Json::exec(const QByteArray sqlquery){
+const QJsonArray Query2Json::exec(const QByteArray sqlquery){
     QSqlQuery query;
 
     query.setForwardOnly(true);
     if (!query.exec(sqlquery))
-        return QString();
+        return QJsonArray();
 
-    QJsonDocument  json;
+//    QJsonDocument  json;
     QJsonArray     recordsArray;
 
     while(query.next()) {
@@ -20,7 +20,8 @@ const QString Query2Json::exec(const QByteArray sqlquery){
         }
         recordsArray.push_back(recordObject);
     }
-    json.setArray(recordsArray);
+    return recordsArray;
+//    json.setArray(recordsArray);
 
-    return json.toJson(QJsonDocument::Compact);
+//    return json.toJson(QJsonDocument::Compact);
 }

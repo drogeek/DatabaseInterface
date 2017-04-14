@@ -4,6 +4,8 @@
 #include <QJsonDocument>
 #include <QTimer>
 #include <QSqlError>
+#include <QDebug>
+#include "servernotifier.h"
 #include "query2json.h"
 #define __WINMEDIA_DEBUG
 int main(int argc, char *argv[])
@@ -27,6 +29,15 @@ int main(int argc, char *argv[])
     const QString IP = "127.0.0.1";
     const int PORT = 1337;
 
+
+    QStringList list;
+    list.append("test");
+    list.append("test2");
+    QJsonArray arr = QJsonArray::fromStringList(list);
+    QJsonObject obj;
+    obj.insert("ok",QJsonValue("test3"));
+    obj.insert("arr",arr);
+    qDebug() << obj;
 #ifdef __WINMEDIA_DEBUG
     //Show available drivers
     QStringList drivers = QSqlDatabase::drivers();
@@ -99,17 +110,11 @@ int main(int argc, char *argv[])
 /* ******SERVER PART****** */
     server.listen(QHostAddress(IP),PORT);
     qDebug() << server.errorString();
-    QObject::connect(&server, &QTcpServer::newConnection, [&server](){
+    ServerNotifier notifier;
+    QObject::connect(&server, &QTcpServer::newConnection, [&server,&notifier](){
        qDebug() << "new connection";
        QSharedPointer<QTcpSocket> socket(server.nextPendingConnection());
-       QObject::connect(&(*socket), &QTcpSocket::readyRead,[socket](){
-           auto input = socket->readAll();
-           qDebug() << input;
-           auto toSend = Query2Json::exec(input);
-           socket->write(toSend.toUtf8());
-           qDebug() << toSend;
-
-       });
+       notifier.setSocket(socket);
     });
 /* ************ */
 

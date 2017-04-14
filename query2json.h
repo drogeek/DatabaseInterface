@@ -9,15 +9,9 @@
 #include <QSqlRecord>
 #include <QVariant>
 
-class Query2Json : public QObject
+class Query2Json
 {
-    Q_OBJECT
 public:
-    static const QString exec(const QByteArray sqlquery);
-
-signals:
-
-public slots:
+    static const QJsonArray exec(const QByteArray sqlquery);
 };
-
 #endif // QUERY2JSON_H
