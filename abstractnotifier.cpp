@@ -34,13 +34,18 @@ void AbstractNotifier::setSocket(QSharedPointer<QTcpSocket> sock){
 void AbstractNotifier::parse(){
     qDebug() << "parse";
     QByteArray arr=m_sock->readAll();
-    auto jsonDoc = QJsonDocument::fromJson(arr);
-    auto jsonObj = jsonDoc.object();
-    if(jsonObj[JSON_TYPE].toString() == NOTIFY){
-        emit newNotification(jsonObj[JSON_TARGET].toString(),jsonObj[JSON_DATA]);
-    }
-    else if(jsonObj[JSON_TYPE].toString() == DB){
-        emit newQuery(jsonObj[JSON_TARGET].toString(),jsonObj[JSON_DATA]);
+    auto list = arr.split('\n');
+    for(auto i : list){
+        qDebug() << "data received: " << i;
+        auto jsonDoc = QJsonDocument::fromJson(i);
+        qDebug() << "jsonDoc: " << jsonDoc;
+        auto jsonObj = jsonDoc.object();
+        if(jsonObj[JSON_TYPE].toString() == NOTIFY){
+            emit newNotification(jsonObj[JSON_TARGET].toString(),jsonObj[JSON_DATA]);
+        }
+        else if(jsonObj[JSON_TYPE].toString() == DB){
+            emit newQuery(jsonObj[JSON_TARGET].toString(),jsonObj[JSON_DATA]);
+        }
     }
 }
 
@@ -63,5 +68,5 @@ void AbstractNotifier::send(QJsonValue value, QString type, QString target){
     else if(value.isObject())
         result = wrapWithType(value.toObject(),type,target);
     //TODO: error?
-    m_sock->write(result.toJson());
+    m_sock->write(result.toJson(QJsonDocument::Compact)+'\n');
 }

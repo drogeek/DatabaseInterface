@@ -25,16 +25,15 @@ class AbstractNotifier: public QObject
 protected:
     QSharedPointer<QTcpSocket> m_sock;
 
-
     static const QString CMDFILE;
-    static const NotifType notifType;
-    static const QString JSON_TYPE;
-    static const QString JSON_DATA;
     static const QString JSON_TARGET;
 
     virtual void notification(QString target,QJsonValue value) = 0;
     virtual void query(QString target,QJsonValue value) = 0;
 public:
+    static const NotifType notifType;
+    static const QString JSON_DATA;
+    static const QString JSON_TYPE;
     static const QString NOTIFY;
     static const QString DB;
     static const QString PANEL;
