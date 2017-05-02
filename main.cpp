@@ -5,39 +5,27 @@
 #include <QTimer>
 #include <QSqlError>
 #include <QDebug>
+#include <QSettings>
+#include <QGuiApplication>
+#include <QQmlApplicationEngine>
+#include <QQmlContext>
 #include "servernotifier.h"
 #include "query2json.h"
+#include "connection.h"
+#include "databaseaccess.h"
+#include "optionsxml.h"
 #define __WINMEDIA_DEBUG
 int main(int argc, char *argv[])
 {
-    QCoreApplication a(argc, argv);
-
-#ifdef __linux__
-    const QString DRIVER = "ODBC Driver 13 for SQL Server";
-#elif _WIN32
-    const QString DRIVER = "SQL Server";
-#endif
-    QTcpServer server;
+    QCoreApplication::setAttribute(Qt::AA_EnableHighDpiScaling);
+    QGuiApplication app(argc,argv);
 
 
-    //TODO: to be replaced by data provided in a file
-    const QString DBSERVER = "127.0.0.1";
-    const QString DBPORT = "1433";
-    const QString DBUSER = "test";
-    const QString DBPASSWORD = "test";
-    const QString NAME = "CartridgeApplication";
-    const QString IP = "127.0.0.1";
-    const int PORT = 1337;
+    QCoreApplication::setOrganizationName("WinMedia");
+    QCoreApplication::setOrganizationDomain("winmedia.org");
+    QCoreApplication::setApplicationName("Delegate");
+    OptionsXML options;
 
-
-    QStringList list;
-    list.append("test");
-    list.append("test2");
-    QJsonArray arr = QJsonArray::fromStringList(list);
-    QJsonObject obj;
-    obj.insert("ok",QJsonValue("test3"));
-    obj.insert("arr",arr);
-    qDebug() << obj;
 #ifdef __WINMEDIA_DEBUG
     //Show available drivers
     QStringList drivers = QSqlDatabase::drivers();
@@ -48,75 +36,128 @@ int main(int argc, char *argv[])
     }
 #endif
 
-/* ******DB PART****** */
-    QSqlDatabase db = QSqlDatabase::addDatabase("QODBC");
-    db.setDatabaseName(
-                "Driver={"+DRIVER+"};\
-                Server="+DBSERVER+","+DBPORT+";\
-                Uid="+DBUSER+";\
-                Pwd="+DBPASSWORD+";"
-    );
-
-    QTimer timer;
-    if(db.open()){
-        qDebug() << "Opening of DB successful";
-        //Record ourselves in the Computer table on the DB
-        QSqlQuery query;
-        qDebug() << QString("SELECT Ip \
-                            FROM [Winmedia].[dbo].[Computer] \
-                            WHERE Name = '%1'").arg(NAME);
-        auto result=query.exec(QString("SELECT Name,Ip \
-                                FROM [Winmedia].[dbo].[Computer] \
-                                WHERE Name = '%1'").arg(NAME));
-        if(!result){
-            qDebug() << query.lastError();
-        }
-        else{
-            query.next();
-            if(!query.isValid()){
-                qDebug() << "Can't find you in the DB, adding you";
-                QSqlQuery insert;
-                auto result = insert.exec(QString(
-                                     "INSERT INTO [WinMedia].[dbo].[Computer] (Name,Ip,Modify,X,Y,Command,Properties) \
-                                     VALUES ('"+NAME+"','"+IP+"',getutcdate(),0,0,'','')")
-                                    );
-                if(!result){
-                    qDebug() << insert.lastError();
-                }
-            }
-            else{
-                auto updateModify = [NAME](){
-                    QSqlQuery update;
-                    auto result = update.exec(
-                                "UPDATE [WinMedia].[dbo].[Computer] \
-                                SET modify=getutcdate() \
-                                WHERE name = '"+NAME+"'"
-                            );
-                    if(!result){
-                        qDebug() << update.lastError();
-                    }
-                };
-                updateModify();
-                QObject::connect(&timer,&QTimer::timeout, updateModify);
-                timer.start(5000);
-            }
-        }
-
-    }
-    else
-        qDebug() << db.lastError();
-/* ************ */
-
-/* ******SERVER PART****** */
-    server.listen(QHostAddress(IP),PORT);
-    qDebug() << server.errorString();
-    ServerNotifier notifier;
-    QObject::connect(&server, &QTcpServer::newConnection, [&server,&notifier](){
-       qDebug() << "new connection";
-       QSharedPointer<QTcpSocket> socket(server.nextPendingConnection());
-       notifier.setSocket(socket);
+    /**DB CONNECTION**/
+    DataBaseAccess db;
+    db.setDatabase(
+                options.value("db/ip").toString(),
+                options.value("db/port").toInt(),
+                options.value("db/user").toString(),
+                options.value("db/pass").toString()
+                );
+    QObject::connect(&options,&OptionsXML::dbConfigChanged,[&options,&db](){
+        db.setDatabase(
+                options.value("db/ip").toString(),
+                options.value("db/port").toInt(),
+                options.value("db/user").toString(),
+                options.value("db/pass").toString()
+                );
     });
-/* ************ */
+    //TODO: connect error to view
 
-    return a.exec();
+    /**APP CONNECTION**/
+    QSharedPointer<QTcpSocket> appSocket(new QTcpSocket());
+    QTimer appTimer;
+    ServerNotifier notifier;
+    QObject::connect(&options,&OptionsXML::appConfigChanged,&(*appSocket),&QTcpSocket::disconnectFromHost);
+    QObject::connect(&appTimer, QTimer::timeout, [appSocket,&options](){
+        qDebug() << "try to reconnect to App";
+        appSocket->connectToHost(
+            QHostAddress(options.value("app/ip").toString()),
+            options.value("app/port").toInt()
+            );
+    });
+    QObject::connect(&(*appSocket),&QTcpSocket::disconnected,[&notifier, appSocket, &options, &appTimer](){
+        notifier.setConnected(false);
+        appTimer.start(1000);
+    });
+    appTimer.start(1000);
+    QObject::connect(&(*appSocket),&QTcpSocket::connected,[&appSocket,&notifier,&appTimer](){
+        appTimer.stop();
+        notifier.setSocket(appSocket);
+    });
+
+    /**WINMEDIA CONNECTION**/
+    Connection connectionRami;
+//    options.setValue("local/ip","127.0.0.1");
+
+    QSharedPointer<QTcpServer> server(new QTcpServer());
+    bool serverResp = server->listen(
+                    QHostAddress(options.value("local/ip").toString()),
+                    options.value("win/port").toInt()
+                    );
+        if(serverResp){
+            QObject::connect(&(*server), &QTcpServer::newConnection, [&server,&notifier,&connectionRami](){
+               qDebug() << "new connection";
+
+               QSharedPointer<QTcpSocket> socket(server->nextPendingConnection());
+               connectionRami.setSocket(socket);
+               QObject::connect(&(*socket),&QTcpSocket::readyRead,&connectionRami,&Connection::receive);
+               QObject::connect(&(*socket),&QTcpSocket::disconnected,[&connectionRami,&server](){
+                   connectionRami.disconnect();
+                   server->close();
+               });
+               QObject::connect(&notifier,&ServerNotifier::commandReceived,[&connectionRami](QVariantMap map){
+                   int column = map[ServerNotifier::RAMI_COLUMN].toInt();
+                   int row = map[ServerNotifier::RAMI_ROW].toInt();
+                   bool state = map[ServerNotifier::RAMI_STATE].toBool();
+                   connectionRami.send(row,column,state);
+               });
+               QObject::connect(&connectionRami,
+                                &Connection::commandReceived,
+                                &notifier,
+                                static_cast<void (ServerNotifier::*)(QVariantMap)>(&ServerNotifier::sendRami)
+               );
+            });
+        }
+        else
+            qDebug() << server->errorString();
+
+    QObject::connect(&options,&OptionsXML::winConfigChanged,[&server,&notifier,&connectionRami,&options](){
+        connectionRami.setConnected(false);
+        qDebug() << server->isListening();
+        if (server->isListening()){
+            server->close();
+            connectionRami.disconnect();
+            server = QSharedPointer<QTcpServer>(new QTcpServer());
+        }
+
+        bool serverResp = server->listen(
+                    QHostAddress(options.value("local/ip").toString()),
+                    options.value("win/port").toInt()
+                    );
+        if(serverResp){
+            QObject::connect(&(*server), &QTcpServer::newConnection, [&server,&notifier,&connectionRami](){
+               qDebug() << "new connection";
+
+               QSharedPointer<QTcpSocket> socket(server->nextPendingConnection());
+               connectionRami.setSocket(socket);
+               QObject::connect(&(*socket),&QTcpSocket::readyRead,&connectionRami,&Connection::receive);
+               QObject::connect(&(*socket),&QTcpSocket::disconnected,[&connectionRami](){
+                   connectionRami.disconnect();
+               });
+               QObject::connect(&notifier,&ServerNotifier::commandReceived,[&connectionRami](QVariantMap map){
+                   int column = map[ServerNotifier::RAMI_COLUMN].toInt();
+                   int row = map[ServerNotifier::RAMI_ROW].toInt();
+                   bool state = map[ServerNotifier::RAMI_STATE].toBool();
+                   connectionRami.send(row,column,state);
+               });
+               QObject::connect(&connectionRami,
+                                &Connection::commandReceived,
+                                &notifier,
+                                static_cast<void (ServerNotifier::*)(QVariantMap)>(&ServerNotifier::sendRami)
+               );
+            });
+        }
+        else
+            qDebug() << server->errorString();
+    });
+
+    QQmlApplicationEngine engine;
+    engine.rootContext()->setContextProperty("Rami", &connectionRami);
+    engine.rootContext()->setContextProperty("Options", &options);
+    engine.rootContext()->setContextProperty("Notifier", &notifier);
+    engine.rootContext()->setContextProperty("Database", &db);
+
+    engine.load(QUrl(QLatin1String("qrc:/main.qml")));
+    return app.exec();
 }

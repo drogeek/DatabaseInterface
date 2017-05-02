@@ -8,7 +8,8 @@ const QString ServerNotifier::QUERY = QString("\
 
 ServerNotifier::ServerNotifier()
     :AbstractNotifier(){
-
+    connect(this,&ServerNotifier::newNotification,this,&notification);
+    connect(this,&ServerNotifier::newQuery,this,&query);
 }
 
 ServerNotifier::ServerNotifier(QSharedPointer<QTcpSocket> sock)
@@ -60,7 +61,7 @@ void ServerNotifier::notification(QString target,QJsonValue value){
 void ServerNotifier::query(QString target,QJsonValue value){
     qDebug() << "query received";
     auto jsonArray = Query2Json::exec(value.toString().toUtf8());
-    send(jsonArray,DB,target);
+    send(jsonArray,TYPE_DB,target);
 }
 
 void ServerNotifier::send(QJsonValue value, QString type, QString target){

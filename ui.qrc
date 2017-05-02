@@ -1,0 +1,8 @@
+<RCC>
+    <qresource prefix="/">
+        <file>images/check.png</file>
+        <file>images/config.png</file>
+        <file>images/uncheck.png</file>
+        <file>main.qml</file>
+    </qresource>
+</RCC>

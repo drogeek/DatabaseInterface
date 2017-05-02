@@ -12,8 +12,8 @@ public:
     ServerNotifier();
     ServerNotifier(QSharedPointer<QTcpSocket> sock);
 private:
-    void notification(QString target,QJsonValue value) override;
-    void query(QString target,QJsonValue value) override;
+    void notification(QString target,QJsonValue value);
+    void query(QString target,QJsonValue value);
     void send(QJsonValue value, QString type, QString target);
     static const QString QUERY;
 };

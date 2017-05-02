@@ -1,7 +1,8 @@
 QT += core
 QT += network
 QT += sql
-QT -= gui
+QT += gui
+QT += qml
 
 CONFIG += c++11
 
@@ -13,9 +14,11 @@ TEMPLATE = app
 
 SOURCES += main.cpp \
     query2json.cpp \
-    shareddirnotifier.cpp \
     servernotifier.cpp \
-    abstractnotifier.cpp
+    abstractnotifier.cpp \
+    connection.cpp \
+    ramiProtocol.cpp \
+    databaseaccess.cpp
 
 # The following define makes your compiler emit warnings if you use
 # any feature of Qt which as been marked deprecated (the exact warnings
@@ -32,4 +35,11 @@ HEADERS += \
     query2json.h \
     shareddirnotifier.h \
     servernotifier.h \
-    abstractnotifier.h
+    abstractnotifier.h \
+    optionsxml.h \
+    connection.h \
+    ramiProtocol.h \
+    databaseaccess.h
+
+RESOURCES += \
+    ui.qrc
