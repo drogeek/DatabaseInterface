@@ -13,7 +13,7 @@
 #include "query2json.h"
 #include "connection.h"
 #include "databaseaccess.h"
-#include "optionsxml.h"
+#include "optionxml.h"
 #define __WINMEDIA_DEBUG
 int main(int argc, char *argv[])
 {
@@ -24,7 +24,7 @@ int main(int argc, char *argv[])
     QCoreApplication::setOrganizationName("WinMedia");
     QCoreApplication::setOrganizationDomain("winmedia.org");
     QCoreApplication::setApplicationName("Delegate");
-    OptionsXML options;
+    OptionXML options;
 
 #ifdef __WINMEDIA_DEBUG
     //Show available drivers
@@ -44,7 +44,7 @@ int main(int argc, char *argv[])
                 options.value("db/user").toString(),
                 options.value("db/pass").toString()
                 );
-    QObject::connect(&options,&OptionsXML::dbConfigChanged,[&options,&db](){
+    QObject::connect(&options,&OptionXML::dbConfigChanged,[&options,&db](){
         db.setDatabase(
                 options.value("db/ip").toString(),
                 options.value("db/port").toInt(),
@@ -58,7 +58,7 @@ int main(int argc, char *argv[])
     QSharedPointer<QTcpSocket> appSocket(new QTcpSocket());
     QTimer appTimer;
     ServerNotifier notifier;
-    QObject::connect(&options,&OptionsXML::appConfigChanged,&(*appSocket),&QTcpSocket::disconnectFromHost);
+    QObject::connect(&options,&OptionXML::appConfigChanged,&(*appSocket),&QTcpSocket::disconnectFromHost);
     QObject::connect(&appTimer, QTimer::timeout, [appSocket,&options](){
         qDebug() << "try to reconnect to App";
         appSocket->connectToHost(
@@ -78,7 +78,7 @@ int main(int argc, char *argv[])
 
     /**WINMEDIA CONNECTION**/
     Connection connectionRami;
-//    options.setValue("local/ip","127.0.0.1");
+    options.setValue("local/ip","127.0.0.1");
 
     QSharedPointer<QTcpServer> server(new QTcpServer());
     bool serverResp = server->listen(
@@ -112,8 +112,7 @@ int main(int argc, char *argv[])
         else
             qDebug() << server->errorString();
 
-    QObject::connect(&options,&OptionsXML::winConfigChanged,[&server,&notifier,&connectionRami,&options](){
-        connectionRami.setConnected(false);
+    QObject::connect(&options,&OptionXML::winConfigChanged,[&server,&notifier,&connectionRami,&options](){
         qDebug() << server->isListening();
         if (server->isListening()){
             server->close();
