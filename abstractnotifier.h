@@ -52,6 +52,7 @@ public:
     }
     bool connected(){ return m_connected; }
     virtual ~AbstractNotifier(){}
+    void disconnect();
 
 signals:
     void newNotification(QString target,QJsonValue value);

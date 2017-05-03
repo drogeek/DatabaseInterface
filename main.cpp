@@ -67,7 +67,7 @@ int main(int argc, char *argv[])
             );
     });
     QObject::connect(&(*appSocket),&QTcpSocket::disconnected,[&notifier, appSocket, &options, &appTimer](){
-        notifier.setConnected(false);
+        notifier.disconnect();
         appTimer.start(1000);
     });
     appTimer.start(1000);

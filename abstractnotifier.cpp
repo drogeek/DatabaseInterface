@@ -112,3 +112,9 @@ void AbstractNotifier::sendRami(QVariantMap params){
     bool state = params["state"].toBool();
     sendRami(row,column,state);
 }
+
+void AbstractNotifier::disconnect(){
+    m_sock->disconnectFromHost();
+    m_sock.clear();
+    setConnected(false);
+}
