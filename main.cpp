@@ -15,6 +15,7 @@
 #include "databaseaccess.h"
 #include "optionxml.h"
 #define __WINMEDIA_DEBUG
+void connectToWin(QSharedPointer<QTcpServer> server, Connection* connectionRami, ServerNotifier* notifier, OptionXML* options);
 int main(int argc, char *argv[])
 {
     QCoreApplication::setAttribute(Qt::AA_EnableHighDpiScaling);
@@ -65,6 +66,7 @@ int main(int argc, char *argv[])
             QHostAddress(options.value("app/ip").toString()),
             options.value("app/port").toInt()
             );
+        appSocket->waitForConnected(1000);
     });
     QObject::connect(&(*appSocket),&QTcpSocket::disconnected,[&notifier, appSocket, &options, &appTimer](){
         notifier.disconnect();
@@ -81,37 +83,7 @@ int main(int argc, char *argv[])
     options.setValue("local/ip","127.0.0.1");
 
     QSharedPointer<QTcpServer> server(new QTcpServer());
-    bool serverResp = server->listen(
-                    QHostAddress(options.value("local/ip").toString()),
-                    options.value("win/port").toInt()
-                    );
-        if(serverResp){
-            QObject::connect(&(*server), &QTcpServer::newConnection, [&server,&notifier,&connectionRami](){
-               qDebug() << "new connection";
-
-               QSharedPointer<QTcpSocket> socket(server->nextPendingConnection());
-               connectionRami.setSocket(socket);
-               QObject::connect(&(*socket),&QTcpSocket::readyRead,&connectionRami,&Connection::receive);
-               QObject::connect(&(*socket),&QTcpSocket::disconnected,[&connectionRami,&server](){
-                   connectionRami.disconnect();
-                   server->close();
-               });
-               QObject::connect(&notifier,&ServerNotifier::commandReceived,[&connectionRami](QVariantMap map){
-                   int column = map[ServerNotifier::RAMI_COLUMN].toInt();
-                   int row = map[ServerNotifier::RAMI_ROW].toInt();
-                   bool state = map[ServerNotifier::RAMI_STATE].toBool();
-                   connectionRami.send(row,column,state);
-               });
-               QObject::connect(&connectionRami,
-                                &Connection::commandReceived,
-                                &notifier,
-                                static_cast<void (ServerNotifier::*)(QVariantMap)>(&ServerNotifier::sendRami)
-               );
-            });
-        }
-        else
-            qDebug() << server->errorString();
-
+    connectToWin(server,&connectionRami,&notifier, &options);
     QObject::connect(&options,&OptionXML::winConfigChanged,[&server,&notifier,&connectionRami,&options](){
         qDebug() << server->isListening();
         if (server->isListening()){
@@ -119,36 +91,7 @@ int main(int argc, char *argv[])
             connectionRami.disconnect();
             server = QSharedPointer<QTcpServer>(new QTcpServer());
         }
-
-        bool serverResp = server->listen(
-                    QHostAddress(options.value("local/ip").toString()),
-                    options.value("win/port").toInt()
-                    );
-        if(serverResp){
-            QObject::connect(&(*server), &QTcpServer::newConnection, [&server,&notifier,&connectionRami](){
-               qDebug() << "new connection";
-
-               QSharedPointer<QTcpSocket> socket(server->nextPendingConnection());
-               connectionRami.setSocket(socket);
-               QObject::connect(&(*socket),&QTcpSocket::readyRead,&connectionRami,&Connection::receive);
-               QObject::connect(&(*socket),&QTcpSocket::disconnected,[&connectionRami](){
-                   connectionRami.disconnect();
-               });
-               QObject::connect(&notifier,&ServerNotifier::commandReceived,[&connectionRami](QVariantMap map){
-                   int column = map[ServerNotifier::RAMI_COLUMN].toInt();
-                   int row = map[ServerNotifier::RAMI_ROW].toInt();
-                   bool state = map[ServerNotifier::RAMI_STATE].toBool();
-                   connectionRami.send(row,column,state);
-               });
-               QObject::connect(&connectionRami,
-                                &Connection::commandReceived,
-                                &notifier,
-                                static_cast<void (ServerNotifier::*)(QVariantMap)>(&ServerNotifier::sendRami)
-               );
-            });
-        }
-        else
-            qDebug() << server->errorString();
+        connectToWin(server,&connectionRami,&notifier, &options);
     });
 
     QQmlApplicationEngine engine;
@@ -159,4 +102,38 @@ int main(int argc, char *argv[])
 
     engine.load(QUrl(QLatin1String("qrc:/main.qml")));
     return app.exec();
+}
+
+void connectToWin(QSharedPointer<QTcpServer> server, Connection* connectionRami, ServerNotifier* notifier, OptionXML* options){
+    bool serverResp = server->listen(
+                    QHostAddress(options->value("local/ip").toString()),
+                    options->value("win/port").toInt()
+                    );
+    if(serverResp){
+        QObject::connect(&(*server), &QTcpServer::newConnection, [server,notifier,connectionRami](){
+           qDebug() << "new connection";
+
+           QSharedPointer<QTcpSocket> socket(server->nextPendingConnection());
+           connectionRami->setSocket(socket);
+           QObject::connect(&(*socket),&QTcpSocket::readyRead,connectionRami,&Connection::receive);
+           QObject::connect(&(*socket),&QTcpSocket::disconnected,connectionRami,&Connection::disconnect);
+           QObject::connect(notifier,&ServerNotifier::commandReceived,[connectionRami](QVariantMap map){
+               int column = map[ServerNotifier::RAMI_COLUMN].toInt();
+               int row = map[ServerNotifier::RAMI_ROW].toInt();
+               bool state = map[ServerNotifier::RAMI_STATE].toBool();
+
+               if(connectionRami->connected())
+                   connectionRami->send(row,column,state);
+//               else{
+//               }
+           });
+           QObject::connect(connectionRami,
+                            &Connection::commandReceived,
+                            notifier,
+                            static_cast<void (ServerNotifier::*)(QVariantMap)>(&ServerNotifier::sendRami)
+           );
+        });
+    }
+    else
+        qDebug() << server->errorString();
 }
