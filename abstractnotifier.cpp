@@ -7,6 +7,7 @@ const QString AbstractNotifier::CMDFILE = "WINMEDIA.TMP";
 const QString AbstractNotifier::TYPE_NOTIFY = "NOTIFY";
 const QString AbstractNotifier::TYPE_DB = "DB";
 const QString AbstractNotifier::TYPE_RAMI = "RAMI";
+const QString AbstractNotifier::TYPE_ERR = "ERR";
 
 const QString AbstractNotifier::TARGET_PANEL = "panel";
 const QString AbstractNotifier::TARGET_CARTRIDGE = "cartridge";
@@ -60,6 +61,9 @@ void AbstractNotifier::parse(){
         }
         else if(jsonObj[JSON_TYPE].toString() == TYPE_RAMI){
             emit newRami(jsonObj[JSON_DATA]);
+        }
+        else if(jsonObj[JSON_TYPE].toString() == TYPE_ERR){
+            emit newError(jsonObj[JSON_DATA].toString());
         }
     }
 }

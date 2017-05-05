@@ -11,10 +11,10 @@ class ServerNotifier : public AbstractNotifier
 public:
     ServerNotifier();
     ServerNotifier(QSharedPointer<QTcpSocket> sock);
+    void send(QJsonValue value, QString type, QString target);
 private:
     void notification(QString target,QJsonValue value);
     void query(QString target,QJsonValue value);
-    void send(QJsonValue value, QString type, QString target);
     static const QString QUERY;
 };
 

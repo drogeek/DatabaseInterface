@@ -37,8 +37,13 @@ int main(int argc, char *argv[])
     }
 #endif
 
+    ServerNotifier notifier;
     /**DB CONNECTION**/
     DataBaseAccess db;
+    QObject::connect(&db,DataBaseAccess::error,[&notifier](QString err){
+        if(notifier.connected())
+            notifier.send(err, ServerNotifier::TYPE_ERR,"");
+    });
     db.setDatabase(
                 options.value("db/ip").toString(),
                 options.value("db/port").toInt(),
@@ -58,7 +63,6 @@ int main(int argc, char *argv[])
     /**APP CONNECTION**/
     QSharedPointer<QTcpSocket> appSocket(new QTcpSocket());
     QTimer appTimer;
-    ServerNotifier notifier;
     QObject::connect(&options,&OptionXML::appConfigChanged,&(*appSocket),&QTcpSocket::disconnectFromHost);
     QObject::connect(&appTimer, QTimer::timeout, [appSocket,&options](){
         qDebug() << "try to reconnect to App";
@@ -117,15 +121,16 @@ void connectToWin(QSharedPointer<QTcpServer> server, Connection* connectionRami,
            connectionRami->setSocket(socket);
            QObject::connect(&(*socket),&QTcpSocket::readyRead,connectionRami,&Connection::receive);
            QObject::connect(&(*socket),&QTcpSocket::disconnected,connectionRami,&Connection::disconnect);
-           QObject::connect(notifier,&ServerNotifier::commandReceived,[connectionRami](QVariantMap map){
+           QObject::connect(notifier,&ServerNotifier::commandReceived,[connectionRami,notifier](QVariantMap map){
                int column = map[ServerNotifier::RAMI_COLUMN].toInt();
                int row = map[ServerNotifier::RAMI_ROW].toInt();
                bool state = map[ServerNotifier::RAMI_STATE].toBool();
 
                if(connectionRami->connected())
                    connectionRami->send(row,column,state);
-//               else{
-//               }
+               else{
+                   notifier->send("Not connected to WinMedia", ServerNotifier::TYPE_ERR,"");
+               }
            });
            QObject::connect(connectionRami,
                             &Connection::commandReceived,
