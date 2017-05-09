@@ -19,7 +19,8 @@ SOURCES += main.cpp \
     connection.cpp \
     ramiProtocol.cpp \
     databaseaccess.cpp \
-    optionxml.cpp
+    optionxml.cpp \
+    dberror.cpp
 
 # The following define makes your compiler emit warnings if you use
 # any feature of Qt which as been marked deprecated (the exact warnings
@@ -39,7 +40,8 @@ HEADERS += \
     connection.h \
     ramiProtocol.h \
     databaseaccess.h \
-    optionxml.h
+    optionxml.h \
+    dberror.h
 
 RESOURCES += \
     ui.qrc

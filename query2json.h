@@ -8,6 +8,8 @@
 #include <QJsonArray>
 #include <QSqlRecord>
 #include <QVariant>
+#include <QDebug>
+#include "dberror.h"
 
 class Query2Json
 {

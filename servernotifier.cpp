@@ -60,8 +60,13 @@ void ServerNotifier::notification(QString target,QJsonValue value){
 
 void ServerNotifier::query(QString target,QJsonValue value){
     qDebug() << "query received";
-    auto jsonArray = Query2Json::exec(value.toString().toUtf8());
-    send(jsonArray,TYPE_DB,target);
+    try{
+        auto jsonArray = Query2Json::exec(value.toString().toUtf8());
+        send(jsonArray,TYPE_DB,target);
+    }
+    catch( std::exception & e){
+        send(e.what(),TYPE_ERR,"");
+    }
 }
 
 void ServerNotifier::send(QJsonValue value, QString type, QString target){

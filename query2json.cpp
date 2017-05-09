@@ -5,7 +5,9 @@ const QJsonArray Query2Json::exec(const QByteArray sqlquery){
 
     query.setForwardOnly(true);
     if (!query.exec(sqlquery))
-        return QJsonArray();
+    {
+        throw dbError();
+    }
 
 //    QJsonDocument  json;
     QJsonArray     recordsArray;

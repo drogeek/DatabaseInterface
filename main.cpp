@@ -58,7 +58,6 @@ int main(int argc, char *argv[])
                 options.value("db/pass").toString()
                 );
     });
-    //TODO: connect error to view
 
     /**APP CONNECTION**/
     QSharedPointer<QTcpSocket> appSocket(new QTcpSocket());
@@ -85,6 +84,16 @@ int main(int argc, char *argv[])
     /**WINMEDIA CONNECTION**/
     Connection connectionRami;
     options.setValue("local/ip","127.0.0.1");
+    QObject::connect(&notifier,&ServerNotifier::commandReceived,[&connectionRami,&notifier](QVariantMap map){
+       int column = map[ServerNotifier::RAMI_COLUMN].toInt();
+       int row = map[ServerNotifier::RAMI_ROW].toInt();
+       bool state = map[ServerNotifier::RAMI_STATE].toBool();
+
+       if(connectionRami.connected())
+           connectionRami.send(row,column,state);
+       else
+           notifier.send("Not connected to WinMedia", ServerNotifier::TYPE_ERR,"");
+    });
 
     QSharedPointer<QTcpServer> server(new QTcpServer());
     connectToWin(server,&connectionRami,&notifier, &options);
@@ -121,17 +130,7 @@ void connectToWin(QSharedPointer<QTcpServer> server, Connection* connectionRami,
            connectionRami->setSocket(socket);
            QObject::connect(&(*socket),&QTcpSocket::readyRead,connectionRami,&Connection::receive);
            QObject::connect(&(*socket),&QTcpSocket::disconnected,connectionRami,&Connection::disconnect);
-           QObject::connect(notifier,&ServerNotifier::commandReceived,[connectionRami,notifier](QVariantMap map){
-               int column = map[ServerNotifier::RAMI_COLUMN].toInt();
-               int row = map[ServerNotifier::RAMI_ROW].toInt();
-               bool state = map[ServerNotifier::RAMI_STATE].toBool();
 
-               if(connectionRami->connected())
-                   connectionRami->send(row,column,state);
-               else{
-                   notifier->send("Not connected to WinMedia", ServerNotifier::TYPE_ERR,"");
-               }
-           });
            QObject::connect(connectionRami,
                             &Connection::commandReceived,
                             notifier,
