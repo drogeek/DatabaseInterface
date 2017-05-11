@@ -94,6 +94,12 @@ int main(int argc, char *argv[])
        else
            notifier.send("Not connected to WinMedia", ServerNotifier::TYPE_ERR,"");
     });
+    QObject::connect(&connectionRami,
+                    &Connection::commandReceived,
+                    &notifier,
+                    static_cast<void (ServerNotifier::*)(QVariantMap)>(&ServerNotifier::sendRami)
+    );
+
 
     QSharedPointer<QTcpServer> server(new QTcpServer());
     connectToWin(server,&connectionRami,&notifier, &options);
@@ -129,13 +135,11 @@ void connectToWin(QSharedPointer<QTcpServer> server, Connection* connectionRami,
            QSharedPointer<QTcpSocket> socket(server->nextPendingConnection());
            connectionRami->setSocket(socket);
            QObject::connect(&(*socket),&QTcpSocket::readyRead,connectionRami,&Connection::receive);
-           QObject::connect(&(*socket),&QTcpSocket::disconnected,connectionRami,&Connection::disconnect);
-
-           QObject::connect(connectionRami,
-                            &Connection::commandReceived,
-                            notifier,
-                            static_cast<void (ServerNotifier::*)(QVariantMap)>(&ServerNotifier::sendRami)
-           );
+           QObject::connect(&(*socket),&QTcpSocket::disconnected,connectionRami,[connectionRami,notifier](){
+               connectionRami->disconnect();
+               if(notifier->connected())
+                   notifier->send("Disconnected from WinMedia",ServerNotifier::TYPE_ERR,"");
+           });
         });
     }
     else
