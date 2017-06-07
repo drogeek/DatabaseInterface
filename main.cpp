@@ -40,7 +40,7 @@ int main(int argc, char *argv[])
     ServerNotifier notifier;
     /**DB CONNECTION**/
     DataBaseAccess db;
-    QObject::connect(&db,DataBaseAccess::error,[&notifier](QString err){
+    QObject::connect(&db,&DataBaseAccess::error,[&notifier](QString err){
         if(notifier.connected())
             notifier.send(err, ServerNotifier::TYPE_ERR,"");
     });
@@ -63,7 +63,7 @@ int main(int argc, char *argv[])
     QSharedPointer<QTcpSocket> appSocket(new QTcpSocket());
     QTimer appTimer;
     QObject::connect(&options,&OptionXML::appConfigChanged,&(*appSocket),&QTcpSocket::disconnectFromHost);
-    QObject::connect(&appTimer, QTimer::timeout, [appSocket,&options](){
+    QObject::connect(&appTimer,&QTimer::timeout, [appSocket,&options](){
         qDebug() << "try to reconnect to App";
         appSocket->connectToHost(
             QHostAddress(options.value("app/ip").toString()),
