@@ -41,8 +41,8 @@ void Connection::disconnect(){
     QWeakPointer<QTcpSocket> wp(m_sock);
     QSharedPointer<QTcpSocket> sp = wp.toStrongRef();
     if(sp){
-        sp->disconnectFromHost();
-        m_sock.clear();
+        sp->abort();
+//        m_sock.clear();
         setConnected(false);
     }
 }

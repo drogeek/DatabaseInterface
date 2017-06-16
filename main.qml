@@ -190,6 +190,7 @@ ApplicationWindow {
             TextField{
                 id: dbpassinput
                 inputMethodHints: Qt.ImhDigitsOnly
+                echoMode: TextInput.Password
                 text: Options.dbPass
                 Keys.onReturnPressed: {
 //                    serverportinput.focus = true
@@ -258,7 +259,7 @@ ApplicationWindow {
             }
 
             Text{
-                text: "The port on which to listen for winMedia to connect"
+                text: "The listening port of the mobile/tablet application"
             }
 
             Label{

@@ -38,7 +38,7 @@ void ServerNotifier::notification(QString target,QJsonValue value){
             auto tabName = query.value(0).toString();
             qDebug() << "tabName: " << tabName;
             //TODO: allows the user to list and select a different one
-            QString fileStr = "//DESKTOP-8EBR5IK/WinMedia";
+            QString fileStr = "//127.0.0.1/WinMedia";
             QDir dir(fileStr);
             if(dir.exists()){
                 qDebug() << dir.entryList();
