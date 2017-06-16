@@ -141,12 +141,32 @@ int main(int argc, char *argv[])
     });
 
     QQmlApplicationEngine engine;
+
     engine.rootContext()->setContextProperty("Rami", &connectionRami);
     engine.rootContext()->setContextProperty("Options", &options);
     engine.rootContext()->setContextProperty("Notifier", &notifier);
     engine.rootContext()->setContextProperty("Database", &db);
-
     engine.load(QUrl(QLatin1String("qrc:/main.qml")));
+
+    /*** System tray ***/
+    if(QSystemTrayIcon::isSystemTrayAvailable()){
+        QSystemTrayIcon * systemTray = new QSystemTrayIcon(QIcon("Logo_WinConnect_SystemTray.png"));
+        systemTray->show();
+        QMenu * menu = new QMenu();
+        QAction * quitAction = new QAction("&Quit");
+        QObject::connect(quitAction, &QAction::triggered,QCoreApplication::quit);
+        menu->addAction(quitAction);
+        systemTray->setContextMenu(menu);
+        QObject::connect(systemTray,&QSystemTrayIcon::activated,[&engine](QSystemTrayIcon::ActivationReason reason){
+            if(reason == QSystemTrayIcon::Trigger || reason == QSystemTrayIcon::DoubleClick){
+                QObject * obj = engine.rootObjects()[0];
+                bool isPrinted = QQmlProperty::read(obj,"visible").toBool();
+                QQmlProperty::write(obj,"visible", !isPrinted);
+            }
+        });
+    }
+    /*** ***/
+
     return app.exec();
 }
 

@@ -9,10 +9,10 @@ import QtQml.Models 2.2
 ApplicationWindow {
     id: root
     property int imgSize : 38
-    visible: true
+    visible: false
     width: 420
     height: 420
-    title: qsTr("Cartridge Delegate")
+    title: qsTr("WinConnect")
 
     Rectangle {
         id: rectangle

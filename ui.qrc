@@ -4,5 +4,8 @@
         <file>images/config.png</file>
         <file>images/uncheck.png</file>
         <file>main.qml</file>
+        <file>Logo-125px.ico</file>
+        <file>Logo-16px.png</file>
+        <file>Logo-48px.png</file>
     </qresource>
 </RCC>
