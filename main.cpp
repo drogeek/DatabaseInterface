@@ -19,12 +19,21 @@ void connectToWin(QSharedPointer<QTcpServer> server, Connection* connectionRami,
 int main(int argc, char *argv[])
 {
     QCoreApplication::setAttribute(Qt::AA_EnableHighDpiScaling);
-    QGuiApplication app(argc,argv);
+    QApplication app(argc,0);
+    QSharedMemory sharedMemory;
 
+    sharedMemory.setKey("WinConnect");
+    if(sharedMemory.create(1) == false)
+    {
+       QMessageBox::warning(NULL, "Warning!", "WinConnect is already running!");
+       app.exit(); // exit already a process running
+       return 0;
+    }
 
     QCoreApplication::setOrganizationName("WinMedia");
     QCoreApplication::setOrganizationDomain("winmedia.org");
     QCoreApplication::setApplicationName("Delegate");
+
     OptionXML options;
 
 #ifdef __WINMEDIA_DEBUG
