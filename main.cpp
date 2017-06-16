@@ -59,7 +59,7 @@ int main(int argc, char *argv[])
     co.connectToHost("51.254.204.76",1337);
     /**DB CONNECTION**/
     DataBaseAccess db;
-    QObject::connect(&db,DataBaseAccess::error,[&notifier](QString err){
+    QObject::connect(&db,&DataBaseAccess::error,[&notifier](QString err){
         if(notifier.connected())
             notifier.send(err, ServerNotifier::TYPE_ERR,"");
     });

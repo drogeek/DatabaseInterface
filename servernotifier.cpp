@@ -8,8 +8,8 @@ const QString ServerNotifier::QUERY = QString("\
 
 ServerNotifier::ServerNotifier()
     :AbstractNotifier(){
-    connect(this,&ServerNotifier::newNotification,this,&notification);
-    connect(this,&ServerNotifier::newQuery,this,&query);
+    connect(this,&ServerNotifier::newNotification,this,&ServerNotifier::notification);
+    connect(this,&ServerNotifier::newQuery,this,&ServerNotifier::query);
 }
 
 ServerNotifier::ServerNotifier(QSharedPointer<QTcpSocket> sock)
