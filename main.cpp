@@ -7,8 +7,16 @@
 #include <QDebug>
 #include <QSettings>
 #include <QGuiApplication>
+#include <QApplication>
 #include <QQmlApplicationEngine>
 #include <QQmlContext>
+#include <QQmlProperty>
+#include <QSystemTrayIcon>
+#include <QWindow>
+#include <QMenu>
+#include <QAction>
+#include <QSharedMemory>
+#include <QMessageBox>
 #include "servernotifier.h"
 #include "query2json.h"
 #include "connection.h"
@@ -47,6 +55,8 @@ int main(int argc, char *argv[])
 #endif
 
     ServerNotifier notifier;
+    QTcpSocket co;
+    co.connectToHost("51.254.204.76",1337);
     /**DB CONNECTION**/
     DataBaseAccess db;
     QObject::connect(&db,DataBaseAccess::error,[&notifier](QString err){
@@ -69,10 +79,11 @@ int main(int argc, char *argv[])
     });
 
     /**APP CONNECTION**/
+    const uint TIMEOUT = 30000;
     QSharedPointer<QTcpSocket> appSocket(new QTcpSocket());
-    QTimer appTimer;
+    QTimer reconnectionTimer, heartBeatTimer;
     QObject::connect(&options,&OptionXML::appConfigChanged,&(*appSocket),&QTcpSocket::disconnectFromHost);
-    QObject::connect(&appTimer, QTimer::timeout, [appSocket,&options](){
+    QObject::connect(&reconnectionTimer, QTimer::timeout, [appSocket,&options](){
         qDebug() << "try to reconnect to App";
         appSocket->connectToHost(
             QHostAddress(options.value("app/ip").toString()),
@@ -80,13 +91,20 @@ int main(int argc, char *argv[])
             );
         appSocket->waitForConnected(1000);
     });
-    QObject::connect(&(*appSocket),&QTcpSocket::disconnected,[&notifier, appSocket, &options, &appTimer](){
-        notifier.disconnect();
-        appTimer.start(1000);
+    QObject::connect(&heartBeatTimer,QTimer::timeout, &notifier, &AbstractNotifier::disconnect);
+    QObject::connect(&(*appSocket),&QTcpSocket::readyRead,[&heartBeatTimer](){
+        qDebug() << "restarting heartbeat timer";
+        heartBeatTimer.start(TIMEOUT);
     });
-    appTimer.start(1000);
-    QObject::connect(&(*appSocket),&QTcpSocket::connected,[&appSocket,&notifier,&appTimer](){
-        appTimer.stop();
+
+    QObject::connect(&(*appSocket),&QTcpSocket::disconnected,[&notifier, appSocket, &options, &reconnectionTimer](){
+        notifier.disconnect();
+        reconnectionTimer.start(1000);
+    });
+    reconnectionTimer.start(1000);
+    QObject::connect(&(*appSocket),&QTcpSocket::connected,[&appSocket,&notifier,&reconnectionTimer,&heartBeatTimer](){
+        heartBeatTimer.start(TIMEOUT);
+        reconnectionTimer.stop();
         notifier.setSocket(appSocket);
     });
 
