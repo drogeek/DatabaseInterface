@@ -3,11 +3,11 @@ QT += network
 QT += sql
 QT += gui
 QT += qml
+QT += widgets
 
 CONFIG += c++11
 
-TARGET = DatabaseInterface
-CONFIG += console
+TARGET = WinConnect
 CONFIG -= app_bundle
 
 TEMPLATE = app
@@ -45,3 +45,5 @@ HEADERS += \
 
 RESOURCES += \
     ui.qrc
+
+RC_ICONS = logo_WinConnect.ico
