@@ -74,6 +74,7 @@ public slots:
 private:
     QJsonDocument wrapWithType(QJsonValue data,QString type,QString target);
     bool m_connected;
+    QByteArray m_buffer;
 
 };
 

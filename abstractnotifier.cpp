@@ -47,23 +47,30 @@ void AbstractNotifier::setSocket(QSharedPointer<QTcpSocket> sock){
 void AbstractNotifier::parse(){
     qDebug() << "parse";
     QByteArray arr=m_sock->readAll();
-    auto list = arr.split('\n');
-    for(auto i : list){
-        qDebug() << "data received: " << i;
-        auto jsonDoc = QJsonDocument::fromJson(i);
-        qDebug() << "jsonDoc: " << jsonDoc;
-        auto jsonObj = jsonDoc.object();
-        if(jsonObj[JSON_TYPE].toString() == TYPE_NOTIFY){
-            emit newNotification(jsonObj[JSON_TARGET].toString(),jsonObj[JSON_DATA]);
-        }
-        else if(jsonObj[JSON_TYPE].toString() == TYPE_DB){
-            emit newQuery(jsonObj[JSON_TARGET].toString(),jsonObj[JSON_DATA]);
-        }
-        else if(jsonObj[JSON_TYPE].toString() == TYPE_RAMI){
-            emit newRami(jsonObj[JSON_DATA]);
-        }
-        else if(jsonObj[JSON_TYPE].toString() == TYPE_ERR){
-            emit newError(jsonObj[JSON_DATA].toString());
+    if(!arr.endsWith('\n'))
+        m_buffer.append(arr);
+    else{
+        m_buffer.append(arr);
+        auto list = m_buffer.split('\n');
+        m_buffer.clear();
+        for(auto i : list){
+            qDebug() << "data received: " << i;
+            qDebug() << "from " << m_sock;
+            auto jsonDoc = QJsonDocument::fromJson(i);
+            qDebug() << "jsonDoc: " << jsonDoc;
+            auto jsonObj = jsonDoc.object();
+            if(jsonObj[JSON_TYPE].toString() == TYPE_NOTIFY){
+                emit newNotification(jsonObj[JSON_TARGET].toString(),jsonObj[JSON_DATA]);
+            }
+            else if(jsonObj[JSON_TYPE].toString() == TYPE_DB){
+                emit newQuery(jsonObj[JSON_TARGET].toString(),jsonObj[JSON_DATA]);
+            }
+            else if(jsonObj[JSON_TYPE].toString() == TYPE_RAMI){
+                emit newRami(jsonObj[JSON_DATA]);
+            }
+            else if(jsonObj[JSON_TYPE].toString() == TYPE_ERR){
+                emit newError(jsonObj[JSON_DATA].toString());
+            }
         }
     }
 }
